@@ -17,8 +17,6 @@ import requests
 from collections import Counter
 import datetime as dt
 
-from waitress import serve
-
 app = Flask(__name__)
 scheduler = APScheduler()
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
