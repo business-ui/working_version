@@ -139,7 +139,7 @@ def scheduledTask():
 
 @app.route('/aggs.png')
 def aggs_plot():
-    fig,ax = plt.subplots(figsize=(8,8))
+    fig,ax = plt.subplots(figsize=(10,8))
 
     totals.index = totals.index + 1
     ax.plot(totals.index,totals.drop('Fatality Rate',axis=1))
@@ -171,7 +171,7 @@ def aggs_plot():
 
 @app.route('/confirmed.png')
 def country_aggs_plot():
-    fig,ax = plt.subplots(figsize=(8,8))
+    fig,ax = plt.subplots(figsize=(10,8))
 
     for x in range(len(confirmed_df)):
         country_df = confirmed_df.iloc[x,:-1].dropna().reset_index(drop=True)
@@ -203,7 +203,7 @@ def country_aggs_plot():
 
 @app.route('/dead.png')
 def dead_plot():
-    fig,ax = plt.subplots(figsize=(8,8))
+    fig,ax = plt.subplots(figsize=(10,8))
 
     for x in range(len(death_df)):
         country_df = death_df.iloc[x,:-1].dropna().reset_index(drop=True)
