@@ -201,6 +201,11 @@ def fatality_plot():
 
 @app.route('/')
 def index():
+    aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
+    aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
+    aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
+    top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
+
     def hover(hover_color="#ffff99"):
             return dict(selector="tr:hover",
                 props=[("background-color", "%s" % hover_color)])
