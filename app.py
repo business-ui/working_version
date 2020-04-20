@@ -201,11 +201,24 @@ def fatality_plot():
 
 @app.route('/')
 def index():
+    df = pd.read_sql("SELECT * FROM covid_data",app.config['SQLALCHEMY_DATABASE_URI'], parse_dates=['Date'])
+
+    confirmed_df = df.groupby(["Country_Region","Date"])['Confirmed'].sum().unstack().sort_values(df.Date.max(), ascending = False)
+    death_df = df.groupby(["Country_Region","Date"])['Deaths'].sum().unstack().sort_values(df.Date.max(), ascending = False).loc[[x for x in confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN).index]]#.nlargest(10,df.Date.max())
+    totals = df.groupby("Date").sum().reset_index(drop=True)
+    rates_df = df.groupby("Country_Region").sum()
+
+    confirmed_df = confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN)
+
+    totals['Fatality Rate'] = totals['Deaths'] / totals['Confirmed']
+
     aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
     aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
     aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
-    top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
 
+    rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed']*100
+
+    top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
     def hover(hover_color="#ffff99"):
             return dict(selector="tr:hover",
                 props=[("background-color", "%s" % hover_color)])
@@ -247,26 +260,6 @@ def index():
 
 if __name__ == '__main__':
     
-    df = pd.read_sql("SELECT * FROM covid_data",app.config['SQLALCHEMY_DATABASE_URI'], parse_dates=['Date'])
-
-    confirmed_df = df.groupby(["Country_Region","Date"])['Confirmed'].sum().unstack().sort_values(df.Date.max(), ascending = False)
-    death_df = df.groupby(["Country_Region","Date"])['Deaths'].sum().unstack().sort_values(df.Date.max(), ascending = False).loc[[x for x in confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN).index]]#.nlargest(10,df.Date.max())
-    totals = df.groupby("Date").sum().reset_index(drop=True)
-    rates_df = df.groupby("Country_Region").sum()
-
-    confirmed_df = confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN)
-
-    totals['Fatality Rate'] = totals['Deaths'] / totals['Confirmed']
-
-    aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
-    aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
-    aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
-
-    rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed']*100
-
-    top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
-    
-
     scheduler.add_job(id='Scheduled task',func = scheduledTask, trigger = 'interval', hours=24)
     scheduler.start()
     app.run()
