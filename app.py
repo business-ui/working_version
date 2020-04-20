@@ -201,41 +201,7 @@ def fatality_plot():
 
 @app.route('/')
 def index():
-    def hover(hover_color="#ffff99"):
-        return dict(selector="tr:hover",
-            props=[("background-color", "%s" % hover_color)])
-    styles = [
-        hover(),
-        dict(selector="th", props=[("font-size", "150%"),
-                                ("text-align", "center")]),
-        dict(selector="td", props=[("text-align", "center")]),
-        dict(selector="caption", props=[("caption-side", "bottom")]),
-        dict(selector="table",props=[("margin-left","auto"),
-                                    ("margin-right","auto")])
-    ]
-    return render_template('index.html' , tables=["<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/")[-1][:-4]+"</h2>"+\
-                                                 "<h2 align='center'>End Date: "+timeline_csvs[-1]['href'].split("/")[-1][:-4]+"</h2>"+\
-                                                 "<h1 align='center'>World Totals</h1>"+\
-                                                aggs.style.set_table_styles(styles)\
-                                                    .set_caption("Hover to highlight.")\
-                                                    .format({"Confirmed":"{:,.0f}",
-                                                        "Deaths":"{:,.0f}",
-                                                        "Recovered":"{:,.0f}",
-                                                        "Active":"{:,.0f}",
-                                                        "Fatality Rate":"{:.2f}%"})\
-                                                    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
-                                                    .hide_index()\
-                                                    .render(),
-                                                "<h1 align='center'>Highest Fatality Rates for Countries with over 1,000 Cases</h1>" + \
-                                                top_ten_df.style.set_table_styles(styles)\
-                                                    .set_caption("Hover to highlight.")\
-                                                    .format({"Confirmed":"{:,.0f}",
-                                                                "Deaths":"{:,.0f}",
-                                                                "Recovered":"{:,.0f}",
-                                                                "Active":"{:,.0f}",
-                                                                "Fatality Rate":"{:.2f}%"})\
-                                                    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
-                                                    .render(),])
+    return render_template('index.html' , tables=[aggs_html,top_ten_df])
 
 if __name__ == '__main__':
     
@@ -258,6 +224,44 @@ if __name__ == '__main__':
 
     top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
     
+    def hover(hover_color="#ffff99"):
+            return dict(selector="tr:hover",
+                props=[("background-color", "%s" % hover_color)])
+                
+    styles = [
+            hover(),
+            dict(selector="th", props=[("font-size", "150%"),
+                                    ("text-align", "center")]),
+            dict(selector="td", props=[("text-align", "center")]),
+            dict(selector="caption", props=[("caption-side", "bottom")]),
+            dict(selector="table",props=[("margin-left","auto"),
+                                        ("margin-right","auto")])
+        ]
+    aggs_html = "<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/")[-1][:-4]+"</h2>"+\
+                                                 "<h2 align='center'>End Date: "+timeline_csvs[-1]['href'].split("/")[-1][:-4]+"</h2>"+\
+                                                 "<h1 align='center'>World Totals</h1>"+\
+                                                aggs.style.set_table_styles(styles)\
+                                                    .set_caption("Hover to highlight.")\
+                                                    .format({"Confirmed":"{:,.0f}",
+                                                        "Deaths":"{:,.0f}",
+                                                        "Recovered":"{:,.0f}",
+                                                        "Active":"{:,.0f}",
+                                                        "Fatality Rate":"{:.2f}%"})\
+                                                    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+                                                    .hide_index()\
+                                                    .render()
+    
+    top_ten_df = "<h1 align='center'>Highest Fatality Rates for Countries with over 1,000 Cases</h1>" + \
+    top_ten_df.style.set_table_styles(styles)\
+        .set_caption("Hover to highlight.")\
+        .format({"Confirmed":"{:,.0f}",
+                    "Deaths":"{:,.0f}",
+                    "Recovered":"{:,.0f}",
+                    "Active":"{:,.0f}",
+                    "Fatality Rate":"{:.2f}%"})\
+        .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+        .render()
+
     scheduler.add_job(id='Scheduled task',func = scheduledTask, trigger = 'interval', hours=24)
     scheduler.start()
     app.run()
