@@ -163,7 +163,7 @@ def aggs_plot():
     ax.legend(labels=totals.columns[0:-1],loc="lower right")
     ax.set_yticklabels(["0","1","10","100","1 thousand","10 thousand","100 thousand","1 million","10 million","100 million","1 billion"])
     ax.set_title("COVID-19 by Day")
-    fig.tight_layout()
+    
     
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
@@ -195,7 +195,7 @@ def country_aggs_plot():
     ax.set_yticklabels(["0","1","10","100","1 thousand","10 thousand","100 thousand","1 million","10 million","100 million","1 billion"])
     ax.set_title("Growth of Cases by Country by Day")
     ax.legend(loc="lower right")
-    fig.tight_layout()
+    
 
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
@@ -226,7 +226,7 @@ def dead_plot():
     ax.set_yticklabels(["0","1","10","100","1 thousand","10 thousand","100 thousand","1 million","10 million","100 million","1 billion"])
     ax.set_title("Deaths by Country by Day")
     ax.legend(loc="lower right")
-    fig.tight_layout()
+    
 
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
