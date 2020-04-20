@@ -262,6 +262,6 @@ def index():
 
 if __name__ == '__main__':
     
-    scheduler.add_job(id='Scheduled task',func = scheduledTask, trigger = 'interval', hours=24)
+    scheduler.add_cron_job(id='Scheduled task',func = scheduledTask,  hour=1)
     scheduler.start()
     app.run()
