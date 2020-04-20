@@ -57,7 +57,8 @@ styles = [
         dict(selector="td", props=[("text-align", "center")]),
         dict(selector="caption", props=[("caption-side", "bottom")]),
         dict(selector="table",props=[("margin-left","auto"),
-                                    ("margin-right","auto")])
+                                    ("margin-right","auto"),
+                                    ("background-color","white")])
     ]
 aggs_html = "<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/")[-1][:-4]+"</h2>"+\
                                                 "<h2 align='center'>End Date: "+timeline_csvs[-1]['href'].split("/")[-1][:-4]+"</h2>"+\
