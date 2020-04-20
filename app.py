@@ -262,4 +262,4 @@ if __name__ == '__main__':
     
     scheduler.add_job(id='Scheduled task',func = scheduledTask, trigger = 'interval', hours=24)
     scheduler.start()
-    serve(app)
+    app.run()
