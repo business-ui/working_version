@@ -26,7 +26,7 @@ db = SQLAlchemy(app)
 
 country_counts = Counter()
 url = "https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_daily_reports/"
-soup = BeautifulSoup(requests.get(url).text, features='lxml')
+soup = BeautifulSoup(requests.get(url).text)
 timeline_csvs = soup.select("a[href$='.csv']")
 last_date = dt.datetime.strptime(timeline_csvs[-1]['href'].split("/")[-1][:-4],"%m-%d-%Y")
 
