@@ -28,6 +28,62 @@ soup = BeautifulSoup(requests.get(url).text)
 timeline_csvs = soup.select("a[href$='.csv']")
 last_date = dt.datetime.strptime(timeline_csvs[-1]['href'].split("/")[-1][:-4],"%m-%d-%Y")
 
+df = pd.read_sql("SELECT * FROM covid_data",app.config['SQLALCHEMY_DATABASE_URI'], parse_dates=['Date'])
+
+confirmed_df = df.groupby(["Country_Region","Date"])['Confirmed'].sum().unstack().sort_values(df.Date.max(), ascending = False)
+death_df = df.groupby(["Country_Region","Date"])['Deaths'].sum().unstack().sort_values(df.Date.max(), ascending = False).loc[[x for x in confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN).index]]#.nlargest(10,df.Date.max())
+totals = df.groupby("Date").sum().reset_index(drop=True)
+rates_df = df.groupby("Country_Region").sum()
+
+confirmed_df = confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN)
+
+totals['Fatality Rate'] = totals['Deaths'] / totals['Confirmed']
+
+aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
+aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
+aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
+
+rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed']*100
+
+top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
+def hover(hover_color="#ffff99"):
+        return dict(selector="tr:hover",
+            props=[("background-color", "%s" % hover_color)])
+            
+styles = [
+        hover(),
+        dict(selector="th", props=[("font-size", "150%"),
+                                ("text-align", "center")]),
+        dict(selector="td", props=[("text-align", "center")]),
+        dict(selector="caption", props=[("caption-side", "bottom")]),
+        dict(selector="table",props=[("margin-left","auto"),
+                                    ("margin-right","auto")])
+    ]
+aggs_html = "<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/")[-1][:-4]+"</h2>"+\
+                                                "<h2 align='center'>End Date: "+timeline_csvs[-1]['href'].split("/")[-1][:-4]+"</h2>"+\
+                                                "<h1 align='center'>World Totals</h1>"+\
+                                            aggs.style.set_table_styles(styles)\
+                                                .set_caption("Hover to highlight.")\
+                                                .format({"Confirmed":"{:,.0f}",
+                                                    "Deaths":"{:,.0f}",
+                                                    "Recovered":"{:,.0f}",
+                                                    "Active":"{:,.0f}",
+                                                    "Fatality Rate":"{:.2f}%"})\
+                                                .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+                                                .hide_index()\
+                                                .render()
+
+top_ten_df = "<h1 align='center'>Highest Fatality Rates for Countries with over 1,000 Cases</h1>" + \
+top_ten_df.style.set_table_styles(styles)\
+    .set_caption("Hover to highlight.")\
+    .format({"Confirmed":"{:,.0f}",
+                "Deaths":"{:,.0f}",
+                "Recovered":"{:,.0f}",
+                "Active":"{:,.0f}",
+                "Fatality Rate":"{:.2f}%"})\
+    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+    .render()
+
 def scheduledTask():
     
     def update_countries(df):
@@ -201,61 +257,6 @@ def fatality_plot():
 
 @app.route('/')
 def index():
-    df = pd.read_sql("SELECT * FROM covid_data",app.config['SQLALCHEMY_DATABASE_URI'], parse_dates=['Date'])
-
-    confirmed_df = df.groupby(["Country_Region","Date"])['Confirmed'].sum().unstack().sort_values(df.Date.max(), ascending = False)
-    death_df = df.groupby(["Country_Region","Date"])['Deaths'].sum().unstack().sort_values(df.Date.max(), ascending = False).loc[[x for x in confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN).index]]#.nlargest(10,df.Date.max())
-    totals = df.groupby("Date").sum().reset_index(drop=True)
-    rates_df = df.groupby("Country_Region").sum()
-
-    confirmed_df = confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN)
-
-    totals['Fatality Rate'] = totals['Deaths'] / totals['Confirmed']
-
-    aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
-    aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
-    aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
-
-    rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed']*100
-
-    top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
-    def hover(hover_color="#ffff99"):
-            return dict(selector="tr:hover",
-                props=[("background-color", "%s" % hover_color)])
-                
-    styles = [
-            hover(),
-            dict(selector="th", props=[("font-size", "150%"),
-                                    ("text-align", "center")]),
-            dict(selector="td", props=[("text-align", "center")]),
-            dict(selector="caption", props=[("caption-side", "bottom")]),
-            dict(selector="table",props=[("margin-left","auto"),
-                                        ("margin-right","auto")])
-        ]
-    aggs_html = "<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/")[-1][:-4]+"</h2>"+\
-                                                 "<h2 align='center'>End Date: "+timeline_csvs[-1]['href'].split("/")[-1][:-4]+"</h2>"+\
-                                                 "<h1 align='center'>World Totals</h1>"+\
-                                                aggs.style.set_table_styles(styles)\
-                                                    .set_caption("Hover to highlight.")\
-                                                    .format({"Confirmed":"{:,.0f}",
-                                                        "Deaths":"{:,.0f}",
-                                                        "Recovered":"{:,.0f}",
-                                                        "Active":"{:,.0f}",
-                                                        "Fatality Rate":"{:.2f}%"})\
-                                                    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
-                                                    .hide_index()\
-                                                    .render()
-    
-    top_ten_df = "<h1 align='center'>Highest Fatality Rates for Countries with over 1,000 Cases</h1>" + \
-    top_ten_df.style.set_table_styles(styles)\
-        .set_caption("Hover to highlight.")\
-        .format({"Confirmed":"{:,.0f}",
-                    "Deaths":"{:,.0f}",
-                    "Recovered":"{:,.0f}",
-                    "Active":"{:,.0f}",
-                    "Fatality Rate":"{:.2f}%"})\
-        .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
-        .render()
     return render_template('index.html' , tables=[aggs_html,top_ten_df])
 
 if __name__ == '__main__':
