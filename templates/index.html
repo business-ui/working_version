@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    
+{% endblock %}
+
+{% block body %}
+<h1 align='center'>State of the World with COVID-19</h1>
+
+{% for table in tables %}
+    {{table|safe}}
+    <br>
+{% endfor %}
+
+<div class='images' style="display: flex;flex-direction: column;align-items: center;">
+    <img src='/aggs.png'>
+    <img src='/confirmed.png'>
+    <img src='/dead.png'>
+    <img src='/fatality_rate.png'>
+</div>
+{% endblock %}
