@@ -37,15 +37,27 @@ rates_df = df.groupby("Country_Region").sum()
 
 confirmed_df = confirmed_df.nlargest(10,df.Date.max()).replace(0,np.NaN)
 
+totals.index = totals.index + 1
+for col in totals:
+    totals[col+'_pct_ch'] = totals[col].pct_change()
+    totals[col+'_ch'] = totals[col].diff()
 totals['Fatality Rate'] = totals['Deaths'] / totals['Confirmed']
+# print("totals columns",totals.columns)
 
-aggs = pd.DataFrame(totals.iloc[-1,:-1]).T
-aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] * 100
-aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
+aggs = pd.DataFrame(totals[['Confirmed','Deaths','Recovered','Active']].iloc[-1]).T
+# print("aggs columns",aggs.columns)
+aggs['Fatality Rate'] = aggs['Deaths'] / aggs['Confirmed'] *100
+# aggs['Active'] = aggs['Confirmed'] - aggs['Deaths'] - aggs['Recovered']
 
-rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed']*100
+rates_df['Fatality Rate'] = rates_df['Deaths']/rates_df['Confirmed'] *100
+# print("rates columns",rates_df.columns)
 
 top_ten_df = rates_df.loc[rates_df['Confirmed']>1000].nlargest(10,"Fatality Rate")
+# print("top ten df columns",top_ten_df.columns)
+
+yesterdays_numbers = pd.DataFrame(totals[['Confirmed_ch','Deaths_ch','Recovered_ch','Active_ch']].iloc[-1]).T
+yesterdays_numbers.columns = yesterdays_numbers.columns.str[:-3]
+
 def hover(hover_color="#ffff99"):
         return dict(selector="tr:hover",
             props=[("background-color", "%s" % hover_color)])
@@ -75,15 +87,25 @@ aggs_html = "<h2 align='center'>Start Date: "+timeline_csvs[0]['href'].split("/"
                                                 .render()
 
 top_ten_df = "<h1 align='center'>Highest Fatality Rates for Countries with over 1,000 Cases</h1>" + \
-top_ten_df.style.set_table_styles(styles)\
-    .set_caption("Hover to highlight.")\
-    .format({"Confirmed":"{:,.0f}",
-                "Deaths":"{:,.0f}",
-                "Recovered":"{:,.0f}",
-                "Active":"{:,.0f}",
-                "Fatality Rate":"{:.2f}%"})\
-    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
-    .render()
+            top_ten_df.style.set_table_styles(styles)\
+                .set_caption("Hover to highlight.")\
+                .format({"Confirmed":"{:,.0f}",
+                            "Deaths":"{:,.0f}",
+                            "Recovered":"{:,.0f}",
+                            "Active":"{:,.0f}",
+                            "Fatality Rate":"{:.2f}%"})\
+                .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+                .render()
+
+yesterdays_numbers = "<h1 align='center'>Yesterday's Numbers</h1>"+yesterdays_numbers.style.set_table_styles(styles)\
+                    .set_caption("Hover to highlight.")\
+                    .format({"Confirmed":"{:,.0f}",
+                        "Deaths":"{:,.0f}",
+                        "Recovered":"{:,.0f}",
+                        "Active":"{:,.0f}"})\
+                    .set_table_attributes('border="1" align="center" class="dataframe table table-hover table-bordered"')\
+                    .hide_index()\
+                    .render()
 
 def scheduledTask():
     
@@ -141,15 +163,14 @@ def scheduledTask():
 def aggs_plot():
     fig,ax = plt.subplots(figsize=(10,8))
 
-    totals.index = totals.index + 1
-    ax.plot(totals.index,totals.drop('Fatality Rate',axis=1))
+    ax.plot(totals.index,totals[['Confirmed','Deaths','Recovered','Active']])
     for y in [1,3,5,7,30]:
         ax.plot(np.arange(1,ax.get_xlim()[1]),
                 [2**(x * (1/y)) for x in np.arange(1,ax.get_xlim()[1])],
                 linestyle=':',
                 c="gray")
 
-    ax.set_ylim([1,totals.max().max()**1.1])
+    ax.set_ylim([1,totals['Confirmed'].max().max()**1.1])
 
     # ax.set_xlim([0,ax.get_xlim()[1]])
     ax.set_yscale("log")
@@ -160,11 +181,25 @@ def aggs_plot():
     ax.annotate("doubles\nevery 30 days",(57,10**0.75))
     ax.set_ylabel("Cases")
     ax.set_xlabel("Days")
-    ax.legend(labels=totals.columns[0:-1],loc="lower right")
+    ax.legend(labels=totals.columns[0:4],loc="lower right")
     ax.set_yticklabels(["0","1","10","100","1 thousand","10 thousand","100 thousand","1 million","10 million","100 million","1 billion"])
     ax.set_title("COVID-19 by Day")
     
     
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+@app.route('/pct_change.png')
+def pct_change_plot():
+    fig,ax = plt.subplots(figsize=(10,8))
+    ax.plot(totals.index[1:],totals[['Confirmed_pct_ch','Active_pct_ch','Recovered_pct_ch','Deaths_pct_ch']].iloc[1:])
+    ax.set_title("Percentage Change by Day")
+    ax.set_ylabel("Percent")
+    ax.set_xlabel("Days")
+    ax.set_yticklabels(["{:.2f}%".format(x*100) for x in ax.get_yticks()])
+    ax.legend(totals[['Confirmed_pct_ch','Active_pct_ch','Recovered_pct_ch','Deaths_pct_ch']].columns)
+
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
@@ -183,7 +218,7 @@ def country_aggs_plot():
                 linestyle=':',
                 c="gray")
     ax.set_yscale("log")
-    ax.set_ylim([1,totals.max().max()**1.1])
+    ax.set_ylim([1,totals['Confirmed'].max().max()**1.1])
 
     ax.annotate("doubles\nevery day",(9,10**5.5))
     ax.annotate("doubles\nevery 3 days",(44,10**5.5))
@@ -215,7 +250,7 @@ def dead_plot():
                 linestyle=':',
                 c="gray")
     ax.set_yscale("log")
-    ax.set_ylim([1,totals.max().max()**1.01])# print(plt.gca())
+    ax.set_ylim([1,totals['Deaths'].max().max()**1.01])# print(plt.gca())
     ax.annotate("doubles\nevery day",(16,ax.get_ylim()[1]*.1))
     ax.annotate("doubles\nevery 3 days",(34,10**4.5))
     ax.annotate("doubles\nevery 5 days",(58.5,10**4.15))
@@ -258,10 +293,11 @@ def fatality_plot():
 
 @app.route('/')
 def index():
-    return render_template('index.html' , tables=[aggs_html,top_ten_df])
+    return render_template('index.html' , tables=[aggs_html,top_ten_df,yesterdays_numbers])
 
 if __name__ == '__main__':
     
-    scheduler.add_cron_job(id='Scheduled task',func = scheduledTask,  hour=1)
+    scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
+
     scheduler.start()
     app.run()
