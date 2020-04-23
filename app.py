@@ -1,7 +1,9 @@
 from flask import Flask, render_template, url_for, request, redirect
-from flask_apscheduler import APScheduler
+# from flask_apscheduler import APScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Response
-from flask_sqlalchemy import SQLAlchemy
+# from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
 
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
@@ -18,9 +20,9 @@ from collections import Counter
 import datetime as dt
 
 app = Flask(__name__)
-scheduler = APScheduler()
+scheduler = BackgroundScheduler()
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-db = SQLAlchemy(app)
+
 
 country_counts = Counter()
 url = "https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_daily_reports/"
@@ -109,6 +111,10 @@ yesterdays_numbers = "<h1 align='center'>Yesterday's Numbers</h1>"+yesterdays_nu
 
 def scheduledTask():
     
+    db = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+    connection = db.raw_connection()
+    cursor = connection.cursor()
+
     def update_countries(df):
         misspelled_countries = ["Taiwan","China","Russia","Bahamas","Gambia","Hong Kong","Iran","Moldova","Ireland","Taipei"]
         
@@ -130,33 +136,33 @@ def scheduledTask():
 
     df = pd.DataFrame()
     country_counts = Counter()
-    for each in range(len(timeline_csvs)):
-        csv_date = timeline_csvs[each]['href'].split("/")[-1][:-4]
-        time_slice = pd.read_html(url + csv_date + ".csv")[0]
-        time_slice.columns = time_slice.columns.str.replace("/","_")
-        time_slice = update_countries(time_slice)
-        for country in time_slice['Country_Region'].unique():
-            country_counts[country] += 1
-        if len(time_slice.columns) != 13:
-            if len(time_slice.columns) == 9:
-                del time_slice['Latitude']
-                del time_slice['Longitude']
-            del time_slice['Unnamed: 0']
-            del time_slice['Last Update']
-            time_slice['Active'] = time_slice['Confirmed'] - time_slice['Deaths'] - time_slice['Recovered']
-            time_slice['Date'] = dt.datetime.strptime(csv_date,"%m-%d-%Y")
-        else:
-            del time_slice['Unnamed: 0']
-            del time_slice['Lat']
-            del time_slice['Long_']
-            del time_slice['Last_Update']
-            del time_slice['Combined_Key']
-            del time_slice['FIPS']
-            del time_slice['Admin2']
-            time_slice['Date'] = dt.datetime.strptime(csv_date,"%m-%d-%Y")
-        df = df.append(time_slice)
+    csv_date = timeline_csvs[-1]['href'].split("/")[-1][:-4]
+    time_slice = pd.read_html(url + csv_date + ".csv")[0]
+    time_slice.columns = time_slice.columns.str.replace("/","_")
+    time_slice = update_countries(time_slice)
+    for country in time_slice['Country_Region'].unique():
+        country_counts[country] += 1
+    if len(time_slice.columns) != 13:
+        if len(time_slice.columns) == 9:
+            del time_slice['Latitude']
+            del time_slice['Longitude']
+        del time_slice['Unnamed: 0']
+        del time_slice['Last Update']
+        time_slice['Active'] = time_slice['Confirmed'] - time_slice['Deaths'] - time_slice['Recovered']
+        time_slice['Date'] = dt.datetime.strptime(csv_date,"%m-%d-%Y")
+    else:
+        del time_slice['Unnamed: 0']
+        del time_slice['Lat']
+        del time_slice['Long_']
+        del time_slice['Last_Update']
+        del time_slice['Combined_Key']
+        del time_slice['FIPS']
+        del time_slice['Admin2']
+        time_slice['Date'] = dt.datetime.strptime(csv_date,"%m-%d-%Y")
+    df = df.append(time_slice)
     
-    df.to_sql("covid_data", db, if_exists='replace', index=False)
+    df.to_sql("covid_data", connection, if_exists='append', index=False)
+    connection.close()
     # return render_template('index.html')
 
 @app.route('/aggs.png')
@@ -297,7 +303,7 @@ def index():
 
 if __name__ == '__main__':
     
-    scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
+    scheduler.add_job(id="Scheduled Task",trigger="interval",func = scheduledTask,  minutes=1)
 
     scheduler.start()
     app.run()
