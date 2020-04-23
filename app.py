@@ -303,7 +303,7 @@ def index():
 
 if __name__ == '__main__':
     
-    scheduler.add_job(id="Scheduled Task",trigger="interval",func = scheduledTask,  minutes=1)
+    scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
 
     scheduler.start()
     app.run()
