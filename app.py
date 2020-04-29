@@ -1,6 +1,6 @@
 from flask import Flask, render_template, url_for, request, redirect
-# from flask_apscheduler import APScheduler
-from apscheduler.schedulers.background import BackgroundScheduler
+from flask_apscheduler import APScheduler
+# from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Response
 # from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
@@ -20,13 +20,13 @@ from collections import Counter
 import datetime as dt
 
 app = Flask(__name__)
-scheduler = BackgroundScheduler()
+scheduler = APScheduler()
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
 
 country_counts = Counter()
 url = "https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_daily_reports/"
-soup = BeautifulSoup(requests.get(url).text)
+soup = BeautifulSoup(requests.get(url).text,features='lxml')
 timeline_csvs = soup.select("a[href$='.csv']")
 last_date = dt.datetime.strptime(timeline_csvs[-1]['href'].split("/")[-1][:-4],"%m-%d-%Y")
 
@@ -113,7 +113,6 @@ def scheduledTask():
     
     db = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
     connection = db.raw_connection()
-    cursor = connection.cursor()
 
     def update_countries(df):
         misspelled_countries = ["Taiwan","China","Russia","Bahamas","Gambia","Hong Kong","Iran","Moldova","Ireland","Taipei"]
@@ -301,9 +300,8 @@ def fatality_plot():
 def index():
     return render_template('index.html' , tables=[aggs_html,top_ten_df,yesterdays_numbers])
 
-if __name__ == '__main__':
-    
-    scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
+scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
+scheduler.start()
 
-    scheduler.start()
+if __name__ == '__main__':
     app.run()
