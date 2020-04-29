@@ -164,6 +164,9 @@ def scheduledTask():
     connection.close()
     # return render_template('index.html')
 
+scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
+scheduler.start()
+
 @app.route('/aggs.png')
 def aggs_plot():
     fig,ax = plt.subplots(figsize=(10,8))
@@ -300,8 +303,6 @@ def fatality_plot():
 def index():
     return render_template('index.html' , tables=[aggs_html,top_ten_df,yesterdays_numbers])
 
-scheduler.add_job(id="Scheduled Task",trigger="cron",func = scheduledTask,  hour=1)
-scheduler.start()
 
 if __name__ == '__main__':
     app.run()
