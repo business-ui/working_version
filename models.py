@@ -138,7 +138,7 @@ def plot_frames():
                 linestyle=':',
                 c="gray")
     ax.set_yscale("log")
-    ax.set_ylim([1,df['Confirmed'].max()*1.1])
+    ax.set_ylim([1,df['Confirmed'].max()**1.1])
     ax.annotate("doubles\nevery day",(9,10**5.5))
     ax.annotate("doubles\nevery 3 days",(44,10**5.5))
     ax.annotate("doubles\nevery 5 days",(58.5,10**3.5))
@@ -164,7 +164,7 @@ def plot_frames():
                 linestyle=':',
                 c="gray")
     ax.set_yscale("log")
-    ax.set_ylim([1,df['Deaths'].max()*1.01])# print(plt.gca())
+    ax.set_ylim([1,df['Deaths'].max()**1.01])# print(plt.gca())
     ax.annotate("doubles\nevery day",(16,ax.get_ylim()[1]*.1))
     ax.annotate("doubles\nevery 3 days",(34,10**4.5))
     ax.annotate("doubles\nevery 5 days",(58.5,10**4.15))
