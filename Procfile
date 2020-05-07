@@ -1,2 +1,2 @@
 web: gunicorn app:app
-worker: python models.py
+clock: python models.py
